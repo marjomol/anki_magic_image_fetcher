@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 config.json
 debug.log
+magic_image_fetcher.ankiaddon.zip
 .idea/
 *.swp
 .DS_Store
