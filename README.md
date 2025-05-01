@@ -2,6 +2,7 @@
 
 Automatically fetch high-quality images for your Anki notes using [Pexels](https://www.pexels.com/api/), [Unsplash](https://unsplash.com/developers), or [SerpAPI](https://serpapi.com/). This add-on helps fill empty `Picture` fields in your selected deck.
 
+```
 magic_image_fetcher/
 ├── __init__.py
 ├── magic_image_fetcher.py
@@ -9,6 +10,7 @@ magic_image_fetcher/
 ├── README.md
 ├── LICENSE
 └── manifest.json
+```
 
 ---
 
