@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+config.json
+debug.log
+.idea/
+*.swp
+.DS_Store
