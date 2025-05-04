@@ -42,12 +42,6 @@ DECK_NAME = args.deck
 SEARCH_FIELDS = [f.strip() for f in args.fields.split(",")]
 PICTURE_FIELD = "Picture"
 
-def get_first_available_query(fields):
-    for field_name in SEARCH_FIELDS:
-        if field_name in fields and fields[field_name]["value"].strip():
-            return fields[field_name]["value"]
-    return None
-
 def search_anki_for_empty_picture_notes():
     payload = {
         "action": "findNotes",
@@ -83,7 +77,7 @@ def search_pexels(query):
     PEXELS_API_KEY = config.get("PEXELS_API_KEY")
     if not PEXELS_API_KEY:
         debug("⚠️ Missing Pexels API key in config.json.")
-        return None, None  # Returning image URL and credit info
+        return None, None, None  # Returning image URL and credit info
 
     headers = {"Authorization": PEXELS_API_KEY}
     params = {"query": query, "per_page": 1}
@@ -101,13 +95,13 @@ def search_pexels(query):
         debug(f"⚠️ No results from Pexels for: {query}")
     except Exception as e:
         debug(f"❌ Pexels error: {e}")
-    return None, None
+    return None, None, None
 
 def search_unsplash(query):
     UNSPLASH_ACCESS_KEY = config.get("UNSPLASH_ACCESS_KEY")
     if not UNSPLASH_ACCESS_KEY:
         debug("⚠️ Missing Unsplash API key in config.json.")
-        return None
+        return None, None, None
 
     headers = {
         "Accept-Version": "v1",
@@ -135,7 +129,7 @@ def search_unsplash(query):
             debug(f"❌ Unsplash error {res.status_code}: {res.text}")
     except Exception as e:
         debug(f"❌ Unsplash error: {e}")
-    return None, None
+    return None, None, None
 
 def search_serpapi(query):
     SERPAPI_KEY = config.get("SERPAPI_KEY")
@@ -165,7 +159,7 @@ def search_serpapi(query):
         debug(f"❌ SerpAPI request failed: {e}")
     return None
 
-def update_note_picture(note_id, image_url, credit_html=None, credit_link=None):
+def update_note_picture(note_id, image_url, credit_text=None, credit_link=None):
     # Make the image clickable if credit_link exists
     if credit_link:
         img_tag = f'<a href="{credit_link}" target="_blank"><img src="{image_url}" style="max-width: 100%;"></a>'
@@ -217,21 +211,26 @@ def main():
         note_id = note["noteId"]
         debug(f"📝 Processing note ID {note_id}")
 
-        search_query = get_first_available_query(fields)
-        debug(f"🔍 Query for note {note_id}: {search_query}")
+        image_found = False
 
-        if not search_query:
-            debug(f"⏭️ Skipping note {note_id}: no valid query field.")
-            continue
+        for field_name in SEARCH_FIELDS:
+            search_query = fields.get(field_name, {}).get("value", "").strip()
+            if not search_query:
+                continue
 
-        img_url, credit_name, credit_link = search_image_url(search_query)
-        debug(f"🖼️ Result for '{search_query}': {img_url}, credit: {credit_name}, link: {credit_link}")
+            debug(f"🔍 Trying field '{field_name}' with query '{search_query}'")
+            img_url, credit_name, credit_link = search_image_url(search_query)
 
-        if img_url:
-            update_note_picture(note_id, img_url, credit_name, credit_link)
-            debug(f"✅ Image added to note {note_id}")
-        else:
-            debug(f"❌ No image found for '{search_query}'")
+            if img_url:
+                update_note_picture(note_id, img_url, credit_name, credit_link)
+                debug(f"✅ Image added to note {note_id} from field '{field_name}'")
+                image_found = True
+                break
+            else:
+                debug(f"❌ No image found for '{search_query}' in field '{field_name}'")
+
+        if not image_found:
+            debug(f"⏭️ Skipping note {note_id}: no image found for any search field.")
 
 if __name__ == "__main__":
     main()
