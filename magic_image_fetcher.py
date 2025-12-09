@@ -2,19 +2,8 @@ import os
 import requests
 import json
 import argparse
-import subprocess
-import sys
 from bs4 import BeautifulSoup
 import logging
-
-# Automatically install necessary packages if they are not present
-required_packages = ["requests", "beautifulsoup4"]
-
-for package in required_packages:
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 addon_dir = os.path.abspath(os.path.dirname(__file__))
 log_path = os.path.join(addon_dir, "debug.log")
