@@ -7,6 +7,7 @@ magic_image_fetcher/
 ├── __init__.py
 ├── magic_image_fetcher.py
 ├── config.json
+├── requirements.txt
 ├── README.md
 ├── LICENSE
 └── manifest.json
@@ -27,7 +28,11 @@ magic_image_fetcher/
 
 1. Clone or download this repository into your Anki add-ons folder.
 2. Change `config.example.json` to `config.json` and fill in your API keys.
-3. Restart Anki. A new menu item **"🖼️ Fetch Images"** will appear under **Tools**.
+3. Install the required libraries by running:
+   ```
+   pip install -r requirements.txt
+   ```
+4. Restart Anki. A new menu item **"🖼️ Fetch Images"** will appear under **Tools**.
 
 ---
 
