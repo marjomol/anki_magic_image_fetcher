@@ -5,6 +5,8 @@ import logging
 from aqt import mw
 from aqt.qt import QAction, QInputDialog
 
+__version__ = "1.1.0"
+
 addon_dir = os.path.abspath(os.path.dirname(__file__))
 log_path = os.path.join(addon_dir, "debug.log")
 
