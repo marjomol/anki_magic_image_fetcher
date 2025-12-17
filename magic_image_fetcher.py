@@ -2,7 +2,6 @@ import os
 import requests
 import json
 import argparse
-from bs4 import BeautifulSoup
 import logging
 
 addon_dir = os.path.abspath(os.path.dirname(__file__))
