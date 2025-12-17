@@ -12,6 +12,7 @@ logging.basicConfig(
     filename=log_path,
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
+    encoding='utf-8',   # IMPORTANT: avoid UnicodeEncodeError on macOS
     force=True
 )
 
