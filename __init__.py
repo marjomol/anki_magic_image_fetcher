@@ -3,7 +3,6 @@ import subprocess
 import json
 import logging
 from logging.handlers import RotatingFileHandler
-import sys
 from aqt import mw
 from aqt.qt import QAction, QInputDialog
 from aqt.utils import showInfo
@@ -11,11 +10,12 @@ from aqt.utils import showInfo
 addon_dir = os.path.abspath(os.path.dirname(__file__))
 log_path = os.path.join(addon_dir, "debug.log")
 
-# Set up rotating file handler
+# Set up rotating file handler with UTF-8 encoding
 handler = RotatingFileHandler(
     log_path,
-    maxBytes=1024*1024,  # 1MB
-    backupCount=5  # Keep 5 old log files (debug.log.1, debug.log.2, etc.)
+    maxBytes=1024*1024,   # 1MB
+    backupCount=5,        # keep 5 backups
+    encoding="utf-8"      # IMPORTANT: allow emojis/non-ASCII
 )
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
