@@ -26,13 +26,14 @@ magic_image_fetcher/
 
 ## 🔧 Installation
 
-1. Clone or download this repository into your Anki add-ons folder.
-2. Change `config.example.json` to `config.json` and fill in your API keys.
-3. Install the required libraries by running:
+1. Find by ID, clone or download this repository into your Anki add-ons folder.
+2. Install and configure the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on.
+3. Change `config.example.json` to `config.json` and fill in your API keys.
+4. Install the required libraries by running:
    ```
    pip install -r requirements.txt
    ```
-4. Restart Anki. A new menu item **"🖼️ Fetch Images"** will appear under **Tools**.
+5. Restart Anki. A new menu item **"🖼️ Fetch Images"** will appear under **Tools**.
 
 ---
 
@@ -42,7 +43,7 @@ magic_image_fetcher/
 2. Select your target deck.
 3. Enter search fields among the ones of your notes (comma-separated field names).
 4. Choose your preferred image source.
-5. The script will find empty `Picture` fields and fill them with an image based on your field content.
+5. The script will find empty `Picture` fields and fill them with an image based on your field content. If no image is found for the given field, the next option is taken. If no image is found either way, the next note without picture is processed.
 
 ---
 

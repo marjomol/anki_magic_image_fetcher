@@ -3,6 +3,8 @@ __pycache__/
 config.json
 debug.log
 magic_image_fetcher.ankiaddon.zip
+magic_image_fetcher.ankiaddon
+meta.json
 .idea/
 *.swp
 .DS_Store
