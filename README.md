@@ -69,7 +69,7 @@ magic_image_fetcher/
 ### Step 3: Install Magic Image Fetcher
 
 1. Download this add-on:
-   - From AnkiWeb (recommended): Use code [INSERT_CODE_HERE]
+   - From AnkiWeb (recommended): Use code `649414227`
    - Or manually: Download and extract into your Anki add-ons folder
 2. Restart Anki
 
@@ -116,8 +116,8 @@ python3 -m pip install requests
 ```json
 {
   "PEXELS_API_KEY": "paste_your_pexels_key_here",
-  "UNSPLASH_ACCESS_KEY": "",
-  "SERPAPI_KEY": ""
+  "UNSPLASH_ACCESS_KEY": "paste_your_unsplash_key_here",
+  "SERPAPI_KEY": "paste_your_serpapi_key_here"
 }
 ```
 
