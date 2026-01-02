@@ -3,7 +3,7 @@
     "mod": 0,
     "author": "Marco José Molina Pradillo",
     "description": "Automatically fetches high-quality images from Pexels, Unsplash, or SerpAPI for Anki notes with empty picture fields.",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "anki_version": "25.02.4",
     "tags": ["media", "automation", "images"]
 }
