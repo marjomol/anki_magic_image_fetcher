@@ -51,7 +51,10 @@ magic_image_fetcher/
 
 1. Click **Tools → 🖼️ Fetch Images**
 2. Select your target deck.
-3. Enter search fields among the ones of your notes (comma-separated field names, better if you use more than one).
+3. Select search fields visually using dropdown menus:
+   - The add-on automatically detects available fields from your selected deck's note type
+   - Choose up to **3 fields** in order of preference via interactive dropdowns
+   - Selected fields will be searched in the order you chose (first field is highest priority)
 4. Choose your preferred image source.
 5. The script will find empty `Picture` fields and fill them with an image based on your field content. If no image is found for the given field, the next option is taken. If no image is found either way, the next note without picture is processed.
 

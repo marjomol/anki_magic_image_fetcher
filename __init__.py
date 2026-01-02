@@ -1,4 +1,6 @@
 import os
+import sys
+import platform
 import subprocess
 import json
 import logging
@@ -60,6 +62,94 @@ def get_available_sources():
     return sources
 
 
+def get_fields_for_deck(deck_name):
+    """Return the list of field names for the chosen deck's note type."""
+    debug(f"📥 Fetching fields for deck: {deck_name}")
+
+    note_ids = mw.col.find_notes(f'deck:"{deck_name}"')
+    if not note_ids:
+        debug("⚠️ No notes found in deck")
+        showInfo("Selected deck has no notes.")
+        return []
+
+    models = {}
+    for nid in note_ids:
+        try:
+            note = mw.col.get_note(nid)
+            model = mw.col.models.get(note.mid)
+            if model:
+                models[note.mid] = model
+        except Exception as e:
+            debug(f"⚠️ Skipping note {nid}: {e}")
+
+    if not models:
+        debug("⚠️ No note types found for deck")
+        showInfo("Could not determine note type for this deck.")
+        return []
+
+    # Choose note type if multiple are present
+    model_items = [(model.get("name", f"Model {mid}"), mid, model) for mid, model in models.items()]
+    selected_model = model_items[0][2]
+
+    if len(model_items) > 1:
+        model_items.sort(key=lambda item: item[0].lower())
+        model_names = [item[0] for item in model_items]
+        choice, ok = QInputDialog.getItem(
+            mw,
+            "Select Note Type",
+            "Deck has multiple note types. Choose one:",
+            model_names,
+            0,
+            False,
+        )
+        if not ok or not choice:
+            debug("❌ Note type selection cancelled")
+            return []
+        debug(f"✅ Note type selected: {choice}")
+        selected_model = next(model for name, _, model in model_items if name == choice)
+    else:
+        debug(f"✅ Single note type detected: {model_items[0][0]}")
+
+    fields = [fld.get("name", "") for fld in selected_model.get("flds", []) if fld.get("name")]
+    debug(f"📑 Available fields: {fields}")
+    if not fields:
+        showInfo("No fields found for the selected note type.")
+    return fields
+
+
+def choose_ordered_fields(fields, max_fields=3):
+    """Prompt the user to choose up to max_fields fields in order."""
+    available = list(fields)
+    selected = []
+
+    for idx in range(max_fields):
+        if not available:
+            break
+
+        prompt = f"Choose field #{idx + 1}:"
+        field, ok = QInputDialog.getItem(
+            mw,
+            "Select Field",
+            prompt,
+            available,
+            0,
+            False,
+        )
+
+        if not ok or not field:
+            if selected:
+                debug("✅ Field selection finished early by user")
+                break
+            debug("❌ Field selection cancelled")
+            return []
+
+        selected.append(field)
+        available = [f for f in available if f != field]
+
+    debug(f"✅ Ordered fields selected: {selected}")
+    return selected
+
+
 def run_image_script():
     debug("🚀 run_image_script() called")
     
@@ -86,12 +176,17 @@ def run_image_script():
         return
     debug(f"✅ Deck selected: {deck_name}")
 
-    # Prompt for search fields
-    search_fields, ok = QInputDialog.getText(mw, "Search Fields", "Enter search fields (comma-separated):")
-    if not ok or not search_fields.strip():
-        debug("❌ Search fields cancelled")
+    available_fields = get_fields_for_deck(deck_name)
+    if not available_fields:
         return
-    debug(f"✅ Search fields: {search_fields}")
+
+    ordered_fields = choose_ordered_fields(available_fields, max_fields=3)
+    if not ordered_fields:
+        showInfo("No fields selected. Aborting.")
+        return
+
+    search_fields = ", ".join(ordered_fields)
+    debug(f"✅ Search fields (ordered): {search_fields}")
 
     # Prompt for image source - use the available sources
     source_choice, ok = QInputDialog.getItem(mw, "Image Source", "Choose an image source:", source_options, 0, False)
@@ -102,9 +197,36 @@ def run_image_script():
 
     debug(f"🚀 Launching script with deck={deck_name}, fields={search_fields}, source={source_choice}")
 
-    # Run the script with args - use python3
+    # Choose Python interpreter based on OS
+    # Windows: search for python.exe in Anki directory or use fallback
+    # macOS/Linux: use python3 (from system PATH)
+    if platform.system() == "Windows":
+        # Search for python.exe in common Anki locations
+        anki_dir = os.path.dirname(sys.executable)
+        possible_python_paths = [
+            os.path.join(anki_dir, "python.exe"),
+            os.path.join(os.path.dirname(anki_dir), "python.exe"),
+            "python.exe",
+            "python",
+        ]
+        
+        python_cmd = None
+        for path in possible_python_paths:
+            if path in ["python.exe", "python"] or os.path.isfile(path):
+                python_cmd = path
+                debug(f"🖥️ Windows detected, using Python: {python_cmd}")
+                break
+        
+        if not python_cmd:
+            python_cmd = "python"
+            debug(f"🖥️ Windows detected, falling back to: {python_cmd}")
+    else:
+        python_cmd = "python3"
+        debug(f"🖥️ {platform.system()} detected, using system python3")
+
+    # Run the script with args
     args = [
-        "python3",  # Use system Python interpreter
+        python_cmd,
         script_path,
         f"--deck={deck_name.strip()}",
         f"--fields={search_fields.strip()}",
