@@ -29,9 +29,6 @@ logger.addHandler(handler)
 
 def debug(msg):
     logger.debug(msg)
-    # Force flush to disk
-    for h in logger.handlers:
-        h.flush()
 
 # Test that logging works immediately
 debug("🔄 Starting Magic Image Fetcher")
@@ -201,22 +198,25 @@ def run_image_script():
     # Windows: search for python.exe in Anki directory or use fallback
     # macOS/Linux: use python3 (from system PATH)
     if platform.system() == "Windows":
-        # Search for python.exe in common Anki locations
+        # Prefer pythonw.exe to avoid opening a console window
         anki_dir = os.path.dirname(sys.executable)
         possible_python_paths = [
+            os.path.join(anki_dir, "pythonw.exe"),
             os.path.join(anki_dir, "python.exe"),
+            os.path.join(os.path.dirname(anki_dir), "pythonw.exe"),
             os.path.join(os.path.dirname(anki_dir), "python.exe"),
+            "pythonw.exe",
             "python.exe",
             "python",
         ]
-        
+
         python_cmd = None
         for path in possible_python_paths:
-            if path in ["python.exe", "python"] or os.path.isfile(path):
+            if path in ["pythonw.exe", "python.exe", "python"] or os.path.isfile(path):
                 python_cmd = path
                 debug(f"🖥️ Windows detected, using Python: {python_cmd}")
                 break
-        
+
         if not python_cmd:
             python_cmd = "python"
             debug(f"🖥️ Windows detected, falling back to: {python_cmd}")
@@ -236,7 +236,17 @@ def run_image_script():
     debug(f"📝 Command: {' '.join(args)}")
 
     try:
-        process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        creation_flags = 0
+        if platform.system() == "Windows":
+            creation_flags = subprocess.CREATE_NO_WINDOW
+
+        process = subprocess.Popen(
+            args,
+            shell=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=creation_flags,
+        )
         debug(f"✅ Subprocess launched successfully with PID: {process.pid}")
         showInfo(f"Image fetching started! Check {log_path} for progress.")
     except Exception as e:

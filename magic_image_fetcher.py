@@ -3,6 +3,7 @@ import requests
 import json
 import argparse
 import logging
+import time
 
 addon_dir = os.path.abspath(os.path.dirname(__file__))
 log_path = os.path.join(addon_dir, "debug.log")
@@ -23,9 +24,6 @@ for handler in logger.handlers:
 
 def debug(msg):
     logging.debug(msg)
-    # Force flush to disk
-    for handler in logging.getLogger().handlers:
-        handler.flush()
 
 debug("🔄 Starting Magic Image Fetcher script")
 debug(f"📂 Log path: {log_path}")
@@ -62,8 +60,36 @@ IMAGE_SOURCE = args.source.lower()
 DECK_NAME = args.deck
 SEARCH_FIELDS = [f.strip() for f in args.fields.split(",")]
 PICTURE_FIELD = "Picture"
+REQUEST_TIMEOUT = (5, 30)
+REQUEST_PAUSE_SECONDS = 0.3
 
 debug(f"🎯 Settings: deck='{DECK_NAME}', fields={SEARCH_FIELDS}, source={IMAGE_SOURCE}")
+
+def check_ankiconnect_available():
+    """Check if AnkiConnect is responding before starting."""
+    debug("🔌 Checking AnkiConnect availability...")
+    try:
+        response = requests.post(
+            ANKI_CONNECT_URL,
+            json={"action": "version", "version": 6},
+            timeout=REQUEST_TIMEOUT
+        )
+        if response.status_code == 200:
+            version = response.json().get("result")
+            debug(f"✅ AnkiConnect is available (version {version})")
+            return True
+        else:
+            debug(f"❌ AnkiConnect returned status {response.status_code}")
+            return False
+    except requests.exceptions.Timeout:
+        debug("❌ AnkiConnect connection timeout")
+        return False
+    except requests.exceptions.ConnectionError as e:
+        debug(f"❌ Cannot connect to AnkiConnect: {e}")
+        return False
+    except Exception as e:
+        debug(f"❌ Error checking AnkiConnect: {e}")
+        return False
 
 def search_anki_for_empty_picture_notes():
     debug(f"🔍 Searching for notes with empty {PICTURE_FIELD} field in deck '{DECK_NAME}'")
@@ -75,10 +101,16 @@ def search_anki_for_empty_picture_notes():
         }
     }
     try:
-        response = requests.post(ANKI_CONNECT_URL, json=payload)
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=REQUEST_TIMEOUT)
         result = response.json()["result"]
         debug(f"✅ Found {len(result)} notes with empty pictures")
         return result
+    except requests.exceptions.Timeout:
+        debug("❌ Timeout searching notes via AnkiConnect")
+        return []
+    except requests.exceptions.ConnectionError as e:
+        debug(f"❌ Connection error searching notes: {e}")
+        return []
     except Exception as e:
         debug(f"❌ Error searching notes: {e}")
         return []
@@ -93,10 +125,16 @@ def get_notes_info(note_ids):
         }
     }
     try:
-        response = requests.post(ANKI_CONNECT_URL, json=payload)
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=REQUEST_TIMEOUT)
         result = response.json()["result"]
         debug(f"✅ Retrieved info for {len(result)} notes")
         return result
+    except requests.exceptions.Timeout:
+        debug("❌ Timeout getting notes info via AnkiConnect")
+        return []
+    except requests.exceptions.ConnectionError as e:
+        debug(f"❌ Connection error getting notes info: {e}")
+        return []
     except Exception as e:
         debug(f"❌ Error getting notes info: {e}")
         return []
@@ -124,7 +162,12 @@ def search_pexels(query):
 
     try:
         debug(f"📡 Calling Pexels API for: {query}")
-        res = requests.get("https://api.pexels.com/v1/search", headers=headers, params=params)
+        res = requests.get(
+            "https://api.pexels.com/v1/search",
+            headers=headers,
+            params=params,
+            timeout=REQUEST_TIMEOUT,
+        )
         debug(f"📡 Pexels response status: {res.status_code}")
         
         if res.status_code == 200:
@@ -137,6 +180,8 @@ def search_pexels(query):
                 debug(f"✅ Pexels found image by {photographer}")
                 return image_url, photographer, photographer_url
         debug(f"⚠️ No results from Pexels for: {query}")
+    except requests.exceptions.Timeout:
+        debug(f"❌ Pexels timeout for: {query}")
     except Exception as e:
         debug(f"❌ Pexels error: {e}")
     return None, None, None
@@ -158,7 +203,12 @@ def search_unsplash(query):
 
     try:
         debug(f"📡 Calling Unsplash API for: {query}")
-        res = requests.get("https://api.unsplash.com/search/photos", headers=headers, params=params)
+        res = requests.get(
+            "https://api.unsplash.com/search/photos",
+            headers=headers,
+            params=params,
+            timeout=REQUEST_TIMEOUT,
+        )
         debug(f"📡 Unsplash response status: {res.status_code}")
         
         if res.status_code == 200:
@@ -175,6 +225,8 @@ def search_unsplash(query):
                 debug(f"⚠️ No results from Unsplash for: {query}")
         else:
             debug(f"❌ Unsplash error {res.status_code}: {res.text}")
+    except requests.exceptions.Timeout:
+        debug(f"❌ Unsplash timeout for: {query}")
     except Exception as e:
         debug(f"❌ Unsplash error: {e}")
     return None, None, None
@@ -193,7 +245,7 @@ def search_serpapi(query):
 
     try:
         debug(f"📡 Calling SerpAPI for: {query}")
-        res = requests.get("https://serpapi.com/search", params=params)
+        res = requests.get("https://serpapi.com/search", params=params, timeout=REQUEST_TIMEOUT)
         debug(f"📡 SerpAPI response status: {res.status_code}")
         
         if res.status_code == 200:
@@ -208,6 +260,8 @@ def search_serpapi(query):
                 debug("⚠️ No images found in SerpAPI.")
         else:
             debug(f"❌ SerpAPI error {res.status_code}: {res.text}")
+    except requests.exceptions.Timeout:
+        debug(f"❌ SerpAPI timeout for: {query}")
     except Exception as e:
         debug(f"❌ SerpAPI request failed: {e}")
     return None
@@ -241,12 +295,16 @@ def update_note_picture(note_id, image_url, credit_text=None, credit_link=None):
     }
     
     try:
-        response = requests.post(ANKI_CONNECT_URL, json=payload)
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=REQUEST_TIMEOUT)
         debug(f"📡 AnkiConnect update response: {response.status_code}")
         if response.status_code == 200:
             debug(f"✅ Successfully updated note {note_id}")
         else:
             debug(f"❌ Failed to update note {note_id}: {response.text}")
+    except requests.exceptions.Timeout:
+        debug(f"❌ Timeout updating note {note_id} via AnkiConnect")
+    except requests.exceptions.ConnectionError as e:
+        debug(f"❌ Connection error updating note {note_id}: {e}")
     except Exception as e:
         debug(f"❌ Error updating note {note_id}: {e}")
 
@@ -255,6 +313,11 @@ def main():
 
     if not config:
         debug("❌ Missing config. Aborting.")
+        return
+
+    # Check AnkiConnect before starting
+    if not check_ankiconnect_available():
+        debug("❌ AnkiConnect is not available. Make sure Anki is running and AnkiConnect add-on is installed.")
         return
 
     note_ids = search_anki_for_empty_picture_notes()
@@ -286,6 +349,7 @@ def main():
 
             debug(f"🔍 Trying field '{field_name}' with query '{search_query}'")
             img_url, credit_name, credit_link = search_image_url(search_query)
+            time.sleep(REQUEST_PAUSE_SECONDS)
 
             if img_url:
                 update_note_picture(note_id, img_url, credit_name, credit_link)
@@ -295,9 +359,12 @@ def main():
                 break
             else:
                 debug(f"❌ No image found for '{search_query}' in field '{field_name}'")
+                time.sleep(REQUEST_PAUSE_SECONDS)
 
         if not image_found:
             debug(f"⏭️ Skipping note {note_id}: no image found for any search field.")
+
+        time.sleep(REQUEST_PAUSE_SECONDS)
 
     debug(f"🎉 Processing complete! Updated {success_count}/{processed_count} notes")
 
